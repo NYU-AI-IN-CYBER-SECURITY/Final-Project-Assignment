@@ -1,0 +1,28 @@
+policies:
+  - policy_id: POL-1
+    policy: "Cleartext file transfer (FTP) is not allowed"
+    transport: TCP
+    ports:
+      - 20
+      - 21
+
+  - policy_id: POL-2
+    policy: "Internet Relay Chat (IRC) is not allowed"
+    transport: TCP
+    ports:
+      - "6660-6669"
+      - 6697
+
+  - policy_id: POL-3
+    policy: "SNMP management traffic is not allowed"
+    transport: UDP
+    ports:
+      - 161
+      - 162
+
+  - policy_id: POL-4
+    policy: "POP3 is not allowed for email"
+    transport: TCP
+    ports:
+      - 110
+      - 995
