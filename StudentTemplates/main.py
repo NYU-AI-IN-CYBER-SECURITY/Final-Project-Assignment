@@ -19,7 +19,7 @@ What happens, in order:
         PERMIT or DROP   otherwise, decided by resolve_conflict() below
   6. predictions.csv and run_metadata.json are written to <output_dir>.
   7. generateIOCReport.generate_report() writes the IOC report.
-  8. The trained model files in this folder (if any) are listed in run_metadata.json.
+  8. The trained model files in this folder (if any) are listed in run_metadata.json, and so are, as extra_files, any other files that are not part of a production-ready submission (with a warning).
 
 What you MAY change: everything inside the STUDENT CONFIG block.
 What you must NOT change: the command-line arguments, the output file names, and the column names / values enforced by validate_stage_output(). Grading depends on them.
@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -44,15 +45,16 @@ import warmUp
 
 # ============================== STUDENT CONFIG ==============================
 
-# Order of the three analysis stages. Any order is allowed, but all three must run.
-PIPELINE_ORDER = ["policy", "binary", "multiclass"]
+# Order of the three analysis tasks. Required: set it before you run.
+# Use each of "multiclass", "policy" and "binary" exactly once, in any order.
+# For example, PIPELINE_ORDER = ["multiclass", "binary", "policy"] would start with multiclass first.
+PIPELINE_ORDER = []
 
 # Call warmUp.warm_up() once before the stages run (optional one-off setup).
 RUN_WARM_UP = True
 
-# Testing flag. Be careful if you enable it in your submitted pipeline.
-# If True, and "policy" runs before a classifier, that classifier only receives the packets that were NOT denied; denied packets get empty predictions from it.
-# This saves time, but empty predictions count as wrong, and the report then has no classification for denied packets.
+# If True, any classifier that runs after checkPolicy only receives the packets that were not denied.
+# Denied packets never reach that classifier.
 SKIP_CLASSIFICATION_FOR_DENIED = False
 
 # Explain your conflict rule (written to run_metadata.json for the grader).
@@ -81,9 +83,12 @@ def resolve_conflict(binary_action: str, multiclass_action: str, packet: dict) -
 ID = "packet_id"
 GROUND_TRUTH_COLUMNS = ("label", "Label", "attack_cat", "verdict")
 PROBABILITY = "probability"  # marker: numeric column, values in [0, 1] or NaN
-# Every file in the submission folder is a model file except these (see warmUp.py).
-NOT_MODEL_SUFFIXES = (".py",)
-NOT_MODEL_NAMES = ("requirements.txt", "token.txt")
+# Model files are recognized by their extension (see warmUp.py); a .json file only when it is named like a model.
+MODEL_EXTENSIONS = (".onnx", ".joblib", ".pkl", ".ubj", ".gguf")
+MODEL_TASKS = ("multiClassClassification", "checkPolicy", "binaryClassification", "generateIOCReport")
+MODEL_NAME_PATTERN = re.compile(rf"^[A-Za-z]{{2,}}[0-9]+_({'|'.join(MODEL_TASKS)})_[A-Za-z0-9-]+\.[A-Za-z0-9]+$")
+# Besides .py files and model files, a production-ready submission holds only these.
+SUBMISSION_NAMES = ("requirements.txt", "policy.yaml", "token.txt")
 SKIPPED_FOLDERS = ("__pycache__", ".git", "venv", ".venv")
 
 # Columns each stage must return (besides packet_id) and their allowed values.
@@ -120,35 +125,58 @@ def log(message: str) -> None:
 
 
 def check_config() -> None:
+    if not PIPELINE_ORDER:
+        raise SystemExit(
+            'PIPELINE_ORDER is empty. Set it in the STUDENT CONFIG block of main.py, '
+            'using each of "multiclass", "policy" and "binary" exactly once.'
+        )
     if sorted(PIPELINE_ORDER) != sorted(STAGE_SPECS):
-        raise ValueError(
-            f"PIPELINE_ORDER must contain each of {sorted(STAGE_SPECS)} exactly once, "
-            f"got {PIPELINE_ORDER}"
+        raise SystemExit(
+            f'PIPELINE_ORDER must use each of "multiclass", "policy" and "binary" exactly once, got {PIPELINE_ORDER}'
         )
 
 
-def list_model_files(output_dir: Path) -> list[dict]:
-    """Model files in the submission folder (see warmUp.py), for the grader.
+def is_model_file(path: Path) -> bool:
+    """A model file by extension: .onnx, .joblib, .pkl, .ubj, .gguf, or .json when named like a model."""
+    suffix = path.suffix.lower()
+    return suffix in MODEL_EXTENSIONS or (suffix == ".json" and bool(MODEL_NAME_PATTERN.match(path.name)))
 
-    Every file counts except .py files, requirements.txt, token.txt, README files and this run's outputs.
+
+def submission_files(output_dir: Path) -> tuple[list[Path], list[Path]]:
+    """(model files, extra files) in the submission folder, leaving out this run's outputs.
+
+    Extra files are everything that is not a .py file, requirements.txt, token.txt or a model file, and every file inside
+    a folder: they are not part of a production-ready submission.
     """
     submission_dir = Path(__file__).resolve().parent
     output_dir = output_dir.resolve()
-    found = []
+    models, extras = [], []
     for p in sorted(submission_dir.rglob("*")):
         folders = p.relative_to(submission_dir).parts[:-1]
-        if not p.is_file() or any(folder in SKIPPED_FOLDERS for folder in folders):
+        if not p.is_file() or any(folder in SKIPPED_FOLDERS for folder in folders) or p.resolve().is_relative_to(output_dir):
             continue
-        if p.suffix.lower() in NOT_MODEL_SUFFIXES or p.name in NOT_MODEL_NAMES or p.name.upper().startswith("README"):
-            continue
-        if p.resolve().is_relative_to(output_dir):
-            continue
-        found.append({
-            "file": p.relative_to(submission_dir).as_posix(),
-            "format": p.suffix.lower().lstrip(".") or "(none)",
-            "size_mb": round(p.stat().st_size / 1e6, 2),
-        })
-    return found
+        if folders:
+            extras.append(p)
+        elif is_model_file(p):
+            models.append(p)
+        elif p.suffix.lower() != ".py" and p.name not in SUBMISSION_NAMES:
+            extras.append(p)
+    return models, extras
+
+
+def list_model_files(output_dir: Path) -> list[dict]:
+    """Model files in the submission folder (see warmUp.py), for the grader."""
+    submission_dir = Path(__file__).resolve().parent
+    return [
+        {"file": p.relative_to(submission_dir).as_posix(), "format": p.suffix.lower().lstrip("."), "size_mb": round(p.stat().st_size / 1e6, 2)}
+        for p in submission_files(output_dir)[0]
+    ]
+
+
+def list_extra_files(output_dir: Path) -> list[str]:
+    """Files that are not part of a production-ready submission; uploading any of them to the portal deducts 5 points."""
+    submission_dir = Path(__file__).resolve().parent
+    return [p.relative_to(submission_dir).as_posix() for p in submission_files(output_dir)[1]]
 
 
 def load_packets(path: Path) -> pd.DataFrame:
@@ -337,8 +365,12 @@ def main(argv=None) -> int:
         "timings_seconds": {k: round(v, 3) for k, v in timings.items()},
         "report_files": [str(p) for p in report_files],
         "model_files": list_model_files(args.output),
+        "extra_files": list_extra_files(args.output),
     }
     (args.output / "run_metadata.json").write_text(json.dumps(metadata, indent=2))
+    if metadata["extra_files"]:
+        log(f"WARNING: {len(metadata['extra_files'])} file(s) in this folder are not part of a production-ready submission "
+            "(listed as extra_files in run_metadata.json). Uploading any of them to the portal deducts 5 points.")
 
     log(f"Done in {timings['total']:.2f}s. Outputs in {args.output}")
     return 0
