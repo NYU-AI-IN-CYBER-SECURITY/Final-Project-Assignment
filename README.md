@@ -338,7 +338,7 @@ The file holds one JSON array, with one entry for every packet whose `final_acti
 | `protocol` | The `proto` column, unchanged |
 | `timestamp` | The `timestamp` column, unchanged |
 | `packet_index` | The `packet_id` column, as an integer |
-| `category` | The attack category, `attack_cat_pred`, on every entry: one of the attack categories or `"Normal"`, spelled exactly as in `attack_cat_pred`. For example, `"Normal"` when `attack_cat_pred` is `Normal`, and `"Exploits"` when it is `Exploits`. Use `null` only on a `deny` entry for a packet the multi-class task never classified (see `SKIP_CLASSIFICATION_FOR_DENIED`). |
+| `category` | On `drop` entries: `attack_cat_pred`, one of the attack categories or `"Normal"`, spelled exactly as in `attack_cat_pred`. On `deny` entries: always `null`. A packet that violates a policy is denied by the policy alone, so its entry carries no category, even if your pipeline classified it. |
 | `policy_rule` | The `violated_policy` value as a string, such as `"POL-1"`. Required on `deny` entries, and `null` on `drop` entries. |
 | `severity` | `"low"`, `"medium"` or `"high"`, from the table below |
 | `summary` | A non-empty description of the packet and why it was flagged |
@@ -350,7 +350,7 @@ The file holds one JSON array, with one entry for every packet whose `final_acti
 | `drop` with `Fuzzers` or `Generic` | `medium` |
 | `drop` with `Analysis`, `Reconnaissance` or `"Normal"` | `low` |
 
-A deny entry for a packet that violated POL-2 looks like this:
+A deny entry for a packet that violated POL-2 (there is no need to classify, looks like this:
 
 ```json
 {
