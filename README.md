@@ -168,6 +168,7 @@ You set the order of the analysis tasks in `PIPELINE_ORDER`, and each task can r
 - List every package your pipeline needs in `requirements.txt`, with a pinned version (see [Python version and packages](#python-version-and-packages)).
 - Check that your pipeline runs from a fresh Python environment with the command in [How your pipeline is run](#how-your-pipeline-is-run).
 - Submit your completed template folder as described in [What to submit](#what-to-submit).
+- Write your report as described in [Written report](#written-report).
 
 ## Starter template
 
@@ -500,8 +501,8 @@ A **Fail** looks like: generic textbook answers that would read identically for 
 
 Upload every file **individually**, not as a zip file. Upload exactly these files:
 
-- **Web-Portal:** the six template `.py` files (`main.py`, `multiClassClassification.py`, `checkPolicy.py`, `binaryClassification.py`, `generateIOCReport.py`, `warmUp.py`), any other `.py` modules your pipeline imports (such as your own helper files), `requirements.txt`, `policy.yaml`, and your model files.
-- **Gradescope:** the same `.py` files, `requirements.txt` and `policy.yaml`, plus `token.txt`. No model files.
+- **Web-Portal:** the six template `.py` files (`main.py`, `multiClassClassification.py`, `checkPolicy.py`, `binaryClassification.py`, `generateIOCReport.py`, `warmUp.py`), any other `.py` modules your pipeline imports (such as your own helper files), `requirements.txt`, `policy.yaml`, `<netid>_report.md`, and your model files.
+- **Gradescope:** the same `.py` files, `requirements.txt`, `policy.yaml` and `<netid>_report.md`, plus `token.txt`. No model files.
 - **Never upload:** `benchmark.py`, datasets, outputs or notebooks.
 
 `policy.yaml` is part of your deployment package, so upload it to both, even though grading always runs with our own copy of it.
@@ -513,6 +514,7 @@ Put your NetID in front of every `.py` file and model file:
 | Each of the six template `.py` files, and each other `.py` module your pipeline imports | `<netid>_<file name>`, for example `abc123_main.py` or `abc123_helpers.py` |
 | `requirements.txt` | `requirements.txt` |
 | `policy.yaml` | `policy.yaml` |
+| Your written report | `<netid>_report.md`, for example `abc123_report.md` |
 | Each trained model, if any (Web-Portal only) | `<netid>_<task>_<name>.<extension>`, for example `abc123_binaryClassification_rf.onnx` |
 | `token.txt` (Gradescope only) | `token.txt` |
 
@@ -538,11 +540,11 @@ abc123_report.md
 
 | Limit | Value |
 |---|---|
-| Submissions | 5 |
-| Daily cutoff for submission | 18:00 Eastern Time (EST/EDT) |
+| Graded submissions | 5 in total for the whole project (not per day) |
+| Daily cutoff for each batch | 18:00 Eastern Time (EST/EDT) |
 
-18:00 Eastern Time is the daily cutoff, so a submission day runs from 18:00 one day to 18:00 the next, New York time.
-You must have UPLOADED before the cut-off, and upload in progress will not count for that day, but be in the batch for the next day. 
+Submissions are processed in daily batches. A batch runs from 18:00 one day to 18:00 the next, New York time. Your upload must be complete before 18:00 to be in that day's batch; an upload still in progress at 18:00 goes into the next day's batch.
+You can change what you submit for each daily submission batch up until the cut-off. 
 
 ### For Gradescope:
 ```
@@ -564,9 +566,9 @@ token.txt
 
 - Your pipeline runs only on the Web-Portal, on NYU's HPC cluster. When the run finishes, the portal shows your score and a `token.txt`. Gradescope never runs your code: it reads that run's result through the token.
 - Upload your models to the Web-Portal only. Gradescope refuses model files.
-- On Gradescope, upload **exactly** the `.py` files, `requirements.txt` and `policy.yaml` from the portal run whose token you submit: every one of them, unchanged, and no others. If any file differs, is missing or is extra, Gradescope gives 0 for that attempt, but your token is not used, so fix the files and resubmit with the same token.
+- On Gradescope, upload **exactly** the `.py` files, `requirements.txt`, `policy.yaml` and `<netid>_report.md` from the portal run whose token you submit: every one of them, unchanged, and no others. If any file differs, is missing or is extra, Gradescope gives 0 for that attempt, but your token is not used, so fix the files and resubmit with the same token.
 - A token works only for your own submission to this assignment.
-- The portal checks your file names, `main.py`, model sizes and that no required file (including `policy.yaml`) is missing when you upload, and refuses a bad upload straight away, so it does not count towards your daily limit. It also warns you when an upload contains files that are not part of a production-ready submission, which deduct 5 points. A run that fails because of a problem on the cluster does not count either.
+- The portal checks your file names, `main.py`, model sizes and that no required file (including `policy.yaml`) is missing when you upload, and refuses a bad upload straight away, so it does not count towards your 5 submissions. It also warns you when an upload contains files that are not part of a production-ready submission, which deduct 5 points. A run that fails because of a problem on the cluster does not count either.
 
 #### Extra credit for fewer submissions
 
@@ -589,8 +591,9 @@ A submission scores 0 if any of these is true:
 - the files use more than one NetID;
 - a model file is not named `<netid>_<task>_<name>.<extension>`;
 - a single model file exceeds its size limit, or all model files together exceed 3.4 GB.
+- the report is missing, or not named `<netid>_report.md`;
 
-Any other file in your submission does not score 0, but deducts 5 points as not production ready.
+Any file other than those listed in [Project Work](#project-work) does not score 0, but deducts 5 points as not production ready.
 
 Your pipeline must run from a fresh Python 3.12 environment after `pip install -r requirements.txt`, using the command shown in [How your pipeline is run](#how-your-pipeline-is-run).
 
