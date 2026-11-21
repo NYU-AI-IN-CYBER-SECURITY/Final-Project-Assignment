@@ -483,7 +483,7 @@ abc123_binaryClassification_rf.onnx    # your trained models, if any
 
 | Limit | Value |
 |---|---|
-| Submissions per day | 5 |
+| Submissions | 5 |
 | Daily cutoff | 18:00 Eastern Time (EST/EDT) |
 
 Each day's count resets at the daily cutoff, so a submission day runs from 18:00 one day to 18:00 the next, New York time.
