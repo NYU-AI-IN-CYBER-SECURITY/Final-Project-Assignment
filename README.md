@@ -35,7 +35,7 @@ The labelled dataset has three ground-truth columns, which are removed before yo
 
 Some packets have `-` in the `sport` or `dsport` column instead of a number. Most are ARP packets, which have no ports, and a few are TCP or UDP packets. Your pipeline must handle these rows without failing. In the IOC report, use the string `"-"` for `src_port` or `dst_port` when the column is `-`.
 
-Hint: ports may also appear in hexadecimal, for example `0x000b`. Convert them to integers for the IOC report and for policy checking.
+Hint: ports may also appear in hexadecimal, for example `0x000b`. Convert them to integers for the IOC report and for policy checking. A few values in the full UNSW-NB15 data are not valid ports even after conversion, for example `0x20205321`, which is 538,989,345 and far above the highest port, 65535. Treat any `sport` or `dsport` value that is not a whole number from 0 to 65535 after conversion the same way as `-`: it matches no policy port, and in the IOC report you use the string `"-"` for it.
 
 ## How your work is graded
 
@@ -336,7 +336,7 @@ The file holds one JSON array, with one entry for every packet whose `final_acti
 |---|---|
 | `verdict` | `"drop"` or `"deny"` (lowercase), from `final_action` |
 | `src_ip`, `dst_ip` | The `srcip` and `dstip` columns |
-| `src_port`, `dst_port` | The `sport` and `dsport` columns as integers (convert hexadecimal values such as `0x000b`), or the string `"-"` when the column is `-` |
+| `src_port`, `dst_port` | The `sport` and `dsport` columns as integers from 0 to 65535 (convert hexadecimal values such as `0x000b`), or the string `"-"` when the column is `-` or its value is not a valid port after conversion |
 | `protocol` | The `proto` column, unchanged |
 | `timestamp` | The `timestamp` column, unchanged |
 | `packet_index` | The `packet_id` column, as an integer |
@@ -352,7 +352,7 @@ The file holds one JSON array, with one entry for every packet whose `final_acti
 | `drop` with `Fuzzers` or `Generic` | `medium` |
 | `drop` with `Analysis`, `Reconnaissance` or `"Normal"` | `low` |
 
-A deny entry for a packet that violated POL-2 (there is no need to classify, looks like this:
+A deny entry for a packet that violated POL-2 (there is no need to classify), looks like this:
 
 ```json
 {
@@ -451,7 +451,7 @@ These rules are not open to exceptions.
 
 > **Deliverable:** `<netid>_report.md`, between 800 and 2,500 words.
 
-You must include an analytical report as a **Markdown file**, named `<netid>_report.md` (for example, `abc123_report.md`). Markdown only (no associated images, videos, audio, etc.). PDF, Word, Google Docs exports and plain text files are not accepted and will not be graded. Your report must be **between 800 and 2,500 words** and must address all four sections below.
+You must include an analytical report as a **Markdown file**, named `<netid>_report.md` (for example, `abc123_report.md`). Markdown text only (no associated images, videos, audio, etc.). PDF, Word, Google Docs exports and plain text files are not accepted and will not be graded. Your report must be **between 800 and 2,500 words** and must address all four sections below. 
 
 > **2,500 is a ceiling, not a target.** Longer is not better, and padding is visible from orbit, don't pad! A tight report that says what you actually did, with your own numbers, beats a long one that restates the questions back at us. Write to the shortest length that answers all four sections well.
 
@@ -476,7 +476,25 @@ You must include an analytical report as a **Markdown file**, named `<netid>_rep
 #### R.4 Accuracy versus efficiency
 
 * Where did you set the balance between accuracy and efficiency, and why?
-* What did you measure locally (for example, the
+* What did you measure locally (for example, the timings in `run_metadata.json`), and what did you change because of it?
+* What did you give up on one side to gain on the other?
+
+#### Grading the report (Pass / Fail)
+
+The report is **not** scored against your pipeline's benchmark results. A weak pipeline with a sharp report passes. A strong pipeline with a hollow report does not. There is no grading matrix: the report is pass/fail, and the result is issued after the submission deadline.
+
+**The report is required: if it fails, your final project scores 0.**
+
+To earn a **Pass**, your report must:
+
+* Be submitted as `<netid>_report.md`, in Markdown. Any other format is a fail.
+* Stay within **800 to 2,500 words**.
+* Address **all four** sections, R.1 through R.4. A missing section is an automatic fail.
+* Describe **what you actually did**, not what could be done in general. Name your task order, your approach and features for each task, your conflict rule, your test sets, and your reasoning for each.
+* Cite **your own numbers**. Reference your local `benchmark.py` results on each of your test sets and the per-task scores from the individual modules, and say what those numbers told you and what you changed as a result.
+* Be **consistent with your submitted code**. If the report describes an order, a setting, an approach, a feature set or a rule that your code does not implement, that is a fail. Looking at you, LLM heavy users, try writing this yourself, we promise it's a valuable learning!
+
+A **Fail** looks like: generic textbook answers that would read identically for any student in the class, sections left unanswered, no reference to your own experiments, under the word count, or claims contradicted by your own code.
 
 ### Project Work
 
@@ -521,9 +539,10 @@ abc123_report.md
 | Limit | Value |
 |---|---|
 | Submissions | 5 |
-| Daily cutoff | 18:00 Eastern Time (EST/EDT) |
+| Daily cutoff for submission | 18:00 Eastern Time (EST/EDT) |
 
-Each day's count resets at the daily cutoff, so a submission day runs from 18:00 one day to 18:00 the next, New York time.
+18:00 Eastern Time is the daily cutoff, so a submission day runs from 18:00 one day to 18:00 the next, New York time.
+You must have UPLOADED before the cut-off, and upload in progress will not count for that day, but be in the batch for the next day. 
 
 ### For Gradescope:
 ```
