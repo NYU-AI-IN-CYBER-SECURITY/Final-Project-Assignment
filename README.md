@@ -39,6 +39,8 @@ Hint: ports may also appear in hexadecimal, for example `0x000b`. Convert them t
 
 ## How your work is graded
 
+Your written report is graded pass/fail and is required: if it fails, your final project scores 0 (see [Written report](#written-report)).
+
 Your pipeline is graded on three parts: detection, the IOC report and efficiency. Detection and the IOC report are each scored on three test datasets, and the realistic dataset carries the most weight because it is closest to the traffic a deployed pipeline would see.
 
 | Part | Points | Normal dataset | Attack dataset | Realistic dataset |
@@ -445,6 +447,39 @@ These rules are not open to exceptions.
 
 ## What to submit
 
+### Written report
+
+> **Deliverable:** `<netid>_report.md`, between 800 and 2,500 words.
+
+You must include an analytical report as a **Markdown file**, named `<netid>_report.md` (for example, `abc123_report.md`). Markdown only (no associated images, videos, audio, etc.). PDF, Word, Google Docs exports and plain text files are not accepted and will not be graded. Your report must be **between 800 and 2,500 words** and must address all four sections below.
+
+> **2,500 is a ceiling, not a target.** Longer is not better, and padding is visible from orbit, don't pad! A tight report that says what you actually did, with your own numbers, beats a long one that restates the questions back at us. Write to the shortest length that answers all four sections well.
+
+#### R.1 Pipeline design
+
+* What order did you set in `PIPELINE_ORDER`, and why that order?
+* Did any task use the results of an earlier task through `context["stage_results"]`? Which results, and what did they change?
+* Did you set `SKIP_CLASSIFICATION_FOR_DENIED` to `True` or `False`, and why?
+
+#### R.2 Your approach for each task
+
+* For each of the four tasks (multi-class classification, policy checking, binary classification and the IOC report), state the approach you used: hand-written rules, machine-learning models, LLMs, or a combination.
+* Name the features or columns each task uses, the models and their files if any, and how you handled the data quirks described in [The dataset](#the-dataset), such as `-` and hexadecimal ports.
+* Explain why you chose each approach over the alternatives you considered.
+
+#### R.3 Your conflict rule and your test data
+
+* Explain the rule in your `resolve_conflict()` and why you chose it. It must match your `CONFLICT_RULE_DESCRIPTION`.
+* Describe how you built your normal, attack and realistic test sets: where the data came from, how many packets each holds, and the class proportions in your realistic set.
+* Report your `benchmark.py` results on each set, say what they told you, and what you changed as a result.
+
+#### R.4 Accuracy versus efficiency
+
+* Where did you set the balance between accuracy and efficiency, and why?
+* What did you measure locally (for example, the
+
+### Project Work
+
 Upload every file **individually**, not as a zip file. Upload exactly these files:
 
 - **Web-Portal:** the six template `.py` files (`main.py`, `multiClassClassification.py`, `checkPolicy.py`, `binaryClassification.py`, `generateIOCReport.py`, `warmUp.py`), any other `.py` modules your pipeline imports (such as your own helper files), `requirements.txt`, `policy.yaml`, and your model files.
@@ -466,7 +501,7 @@ Put your NetID in front of every `.py` file and model file:
 A model's `<task>` is the module that uses it: `multiClassClassification`, `checkPolicy`, `binaryClassification` or `generateIOCReport`. A task may have several model files, each with its own `<name>`.
 
 For the NetID `abc123`, a submission with one model looks like this:
-### For Web-Portal:
+#### For Web-Portal:
 ```
 abc123_main.py
 abc123_multiClassClassification.py
@@ -477,7 +512,9 @@ abc123_warmUp.py
 requirements.txt
 policy.yaml
 abc123_binaryClassification_rf.onnx    # your trained models, if any
+abc123_report.md
 ```
+
 
 #### Web-Portal submission limits
 
@@ -496,10 +533,13 @@ abc123_checkPolicy.py
 abc123_binaryClassification.py
 abc123_generateIOCReport.py
 abc123_warmUp.py
+abc123_report.md
 requirements.txt
 policy.yaml
 token.txt
 ```
+
+**Do not forget to submit your abc123_report.md!**
 
 #### How the two uploads fit together
 
