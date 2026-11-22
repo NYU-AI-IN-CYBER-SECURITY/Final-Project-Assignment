@@ -87,8 +87,9 @@ PROBABILITY = "probability"  # marker: numeric column, values in [0, 1] or NaN
 MODEL_EXTENSIONS = (".onnx", ".joblib", ".pkl", ".ubj", ".gguf")
 MODEL_TASKS = ("multiClassClassification", "checkPolicy", "binaryClassification", "generateIOCReport")
 MODEL_NAME_PATTERN = re.compile(rf"^[A-Za-z]{{2,}}[0-9]+_({'|'.join(MODEL_TASKS)})_[A-Za-z0-9-]+\.[A-Za-z0-9]+$")
-# Besides .py files and model files, a production-ready submission holds only these.
+# Besides .py files and model files, a production-ready submission holds only these and your written report.
 SUBMISSION_NAMES = ("requirements.txt", "policy.yaml", "token.txt")
+REPORT_NAME_PATTERN = re.compile(r"^[A-Za-z]{2,}[0-9]+_report\.md$")
 SKIPPED_FOLDERS = ("__pycache__", ".git", "venv", ".venv")
 
 # Columns each stage must return (besides packet_id) and their allowed values.
@@ -145,8 +146,8 @@ def is_model_file(path: Path) -> bool:
 def submission_files(output_dir: Path) -> tuple[list[Path], list[Path]]:
     """(model files, extra files) in the submission folder, leaving out this run's outputs.
 
-    Extra files are everything that is not a .py file, requirements.txt, token.txt or a model file, and every file inside
-    a folder: they are not part of a production-ready submission.
+    Extra files are everything that is not a .py file, requirements.txt, policy.yaml, token.txt, your <netid>_report.md
+    or a model file, and every file inside a folder: they are not part of a production-ready submission.
     """
     submission_dir = Path(__file__).resolve().parent
     output_dir = output_dir.resolve()
@@ -159,7 +160,7 @@ def submission_files(output_dir: Path) -> tuple[list[Path], list[Path]]:
             extras.append(p)
         elif is_model_file(p):
             models.append(p)
-        elif p.suffix.lower() != ".py" and p.name not in SUBMISSION_NAMES:
+        elif p.suffix.lower() != ".py" and p.name not in SUBMISSION_NAMES and not REPORT_NAME_PATTERN.match(p.name):
             extras.append(p)
     return models, extras
 

@@ -80,14 +80,22 @@ if __name__ == "__main__":
     SHOWN_PROBLEMS = 5
 
     def as_port(value):
-        """A port column value as an int (decimal, hexadecimal such as 0x000b, or 80.0), or the text itself (e.g. "-")."""
+        """A port column value as an int from 0 to 65535 (decimal, hexadecimal such as 0x000b, or 80.0), or "-" otherwise.
+
+        "-" and any value that is not a whole number from 0 to 65535 after conversion (such as 0x20205321) mean "no port".
+        """
         text = str(value).strip()
-        for convert in (lambda t: int(t, 0), lambda t: int(float(t))):
+        try:
+            number = int(text, 0)
+        except ValueError:
             try:
-                return convert(text)
+                parsed = float(text)
             except ValueError:
-                continue
-        return text
+                return NO_PORT
+            if not parsed.is_integer():
+                return NO_PORT
+            number = int(parsed)
+        return number if 0 <= number <= 65535 else NO_PORT
 
     def packet_key(timestamp, src_ip, src_port, dst_ip, dst_port, protocol):
         values = (timestamp, src_ip, as_port(src_port), dst_ip, as_port(dst_port), protocol)
@@ -106,7 +114,7 @@ if __name__ == "__main__":
     def entry_problem(entry, no_port_keys):
         """The first format problem in one entry, or None if it is valid.
 
-        no_port_keys holds the packets whose sport or dsport column is "-": only there may a port be the string "-".
+        no_port_keys holds the packets whose sport or dsport is "-" or not a valid port: only there may a port be the string "-".
         """
         if not isinstance(entry, dict) or set(entry) != ENTRY_KEYS:
             return "entry must have exactly the keys verdict and stix"
@@ -127,9 +135,9 @@ if __name__ == "__main__":
             if traffic[name] == NO_PORT:
                 key = packet_key(traffic["timestamp"], traffic["src_ip"], traffic["src_port"], traffic["dst_ip"], traffic["dst_port"], traffic["protocol"])
                 if key not in no_port_keys:
-                    return f'{name} may be "-" only for a packet whose {"sport" if name == "src_port" else "dsport"} column is -'
+                    return f'{name} may be "-" only for a packet whose {"sport" if name == "src_port" else "dsport"} column is - or not a valid port'
             elif not is_port(traffic[name]):
-                return f'{name} must be an integer from 0 to 65535, or "-" when the column is -'
+                return f'{name} must be an integer from 0 to 65535, or "-" when the column is - or not a valid port'
         if not isinstance(traffic["protocol"], str) or not traffic["protocol"]:
             return "protocol must be a non-empty string"
         if not isinstance(traffic["timestamp"], str) or not TIMESTAMP_PATTERN.match(traffic["timestamp"]):
@@ -139,11 +147,11 @@ if __name__ == "__main__":
         if not isinstance(indicator, dict) or set(indicator) != INDICATOR_KEYS or indicator["type"] != "indicator":
             return f"second object must be indicator with the keys {sorted(INDICATOR_KEYS)}"
         category, rule = indicator["category"], indicator["policy_rule"]
-        if entry["verdict"] == "deny" and category is None:
-            pass
+        # A drop entry names the attack category; a deny entry has none, because the policy alone denied the packet.
+        if entry["verdict"] == "deny":
+            if category is not None:
+                return f"category of a deny entry must be null (a denied packet carries no category), got {category!r}"
         elif category not in CATEGORIES:
-            if entry["verdict"] == "deny":
-                return f"category of a deny entry must be null, Normal or an attack category, got {category!r}"
             return f"category of a drop entry must be Normal or an attack category, got {category!r}"
         if rule is not None and not (isinstance(rule, str) and POLICY_RULE_PATTERN.match(rule)):
             return f"policy_rule must be null or look like POL-1, got {rule!r}"
@@ -197,7 +205,7 @@ if __name__ == "__main__":
     no_port_keys = {
         packet_key(row["timestamp"], row["srcip"], row["sport"], row["dstip"], row["dsport"], row["proto"])
         for row in packets.to_dict("records")
-        if str(row["sport"]).strip() == NO_PORT or str(row["dsport"]).strip() == NO_PORT
+        if as_port(row["sport"]) == NO_PORT or as_port(row["dsport"]) == NO_PORT
     }
 
     # 2. Format, with the same rules as grading.
@@ -234,8 +242,9 @@ if __name__ == "__main__":
             checks["verdict"].append(f"packet_id {pid}: verdict {entry['verdict']!r}, but final_action is {row['final_action']}")
         predicted = same_category(row["attack_cat_pred"]) if row["attack_cat_pred"] != "" else None
         category = indicator["category"]
-        # The category is the predicted attack category. A deny entry may leave it null instead (policy short-circuit).
-        if verdict == "deny" and category is None:
+        # The category is the predicted attack category on a drop entry. A deny entry's is always null, which the format
+        # check above already requires.
+        if verdict == "deny":
             pass
         elif predicted is None:
             checks["category"].append(f"packet_id {pid}: category {category!r}, but the packet was not classified")
